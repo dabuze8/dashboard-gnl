@@ -6,7 +6,7 @@ st.set_page_config(page_title="Dashboard de Reportes GNL – ANH", layout="wide"
 
 @st.cache_data
 def load_data():
-    df = pd.read_excel("1 MASTER_BD_GNL.xlsx", sheet_name="BD_PGNL")
+    df = pd.read_excel("1. MASTER_BD_GNL.xlsx", sheet_name="BD_PGNL")
 
     # Convertir FECHA a datetime
     df["FECHA"] = pd.to_datetime(df["FECHA"], errors="coerce")
