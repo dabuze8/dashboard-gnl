@@ -18,7 +18,7 @@ st.title("📊 Dashboard de Reportes GNL – ANH")
 # =========================
 @st.cache_data
 def load_data():
-    df = pd.read_excel("1 MASTER_BD_GNL.xlsx", sheet_name="BD_PGNL")
+    df = pd.read_excel("1. MASTER_BD_GNL.xlsx", sheet_name="BD_PGNL")
     return df
 
 df = load_data()
