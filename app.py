@@ -23,6 +23,8 @@ def load_data():
 
 df = load_data()
 
+st.write("Columnas encontradas:", df.columns.tolist())
+
 # Renombrar columnas clave para simplificar
 df = df.rename(columns={
     "FECHA": "Fecha",
