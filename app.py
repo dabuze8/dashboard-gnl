@@ -2,111 +2,132 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# =========================
-# CONFIGURACIÓN GENERAL
-# =========================
+# ----------------------------------------------------
+# CONFIGURACIÓN GENERAL DEL DASHBOARD
+# ----------------------------------------------------
 st.set_page_config(
-    page_title="Dashboard GNL – ANH",
+    page_title="Dashboard de Reportes GNL – ANH",
     layout="wide",
-    initial_sidebar_state="expanded"
+    page_icon="📊"
 )
 
 st.title("📊 Dashboard de Reportes GNL – ANH")
 
-# =========================
-# CARGA DE DATOS
-# =========================
+# ----------------------------------------------------
+# FUNCIÓN PARA CARGAR TRAYECTORIA DE DATOS
+# ----------------------------------------------------
 @st.cache_data
 def load_data():
-    df = pd.read_excel("1. MASTER_BD_GNL.xlsx", sheet_name="BD_PGNL")
+    df = pd.read_excel("1 MASTER_BD_GNL.xlsx", sheet_name="BD_PGNL")
+
+    # Renombrar columnas principales
+    df = df.rename(columns={
+        "FECHA": "Fecha",
+        "GAS PSL\nRECIBIDO\n(MMPCD)": "GN_Entrada",
+        "GNL\nPRODUCCION GNL\n(M3)": "Produccion_GNL",
+        "GNL\nENTREGA  CISTERNAS\n(TN)": "Despachos"
+    })
+
+    # Convertir fecha
+    df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+
+    # Convertir columnas numéricas
+    columnas_num = ["Produccion_GNL", "GN_Entrada", "Despachos"]
+    for col in columnas_num:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
     return df
 
+# ----------------------------------------------------
+# CARGAR DATOS
+# ----------------------------------------------------
 df = load_data()
 
-st.write("Columnas encontradas:", df.columns.tolist())
+# Mostrar columnas solo para diagnóstico (puedes borrar luego)
+# st.write(df.columns.tolist())
 
-# Renombrar columnas clave para simplificar
-df = df.rename(columns={
-    "FECHA": "Fecha",
-    "GAS PSL RECIBIDO (MMPCD)": "GN_Entrada",
-    "GNL PRODUCCION GN (M3)": "Produccion_GNL",
-    "GNL ENTREGA CISTERNAS (TN)": "Despachos"
-})
-
-# Convertir fecha
-df["Fecha"] = pd.to_datetime(df["Fecha"])
-# Convertir columnas numéricas para evitar errores de Plotly
-cols_numericas = ["Produccion_GNL", "GN_Entrada", "Despachos"]
-
-for col in cols_numericas:
-    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-
-# =========================
-# SIDEBAR DE FILTROS
-# =========================
+# ----------------------------------------------------
+# PANEL LATERAL – FILTROS
+# ----------------------------------------------------
 st.sidebar.header("Filtros de Análisis")
 
-# Periodos sugeridos
 periodo = st.sidebar.selectbox(
     "Periodo:",
-    ["Último Mes", "Últimos 3 Meses", "Últimos 6 Meses", "Año Actual", "Todo"]
+    ["Último Mes", "Últimos 3 Meses", "Último Año", "Todo"]
 )
 
-# Rango de fechas manual
-fecha_inicio = st.sidebar.date_input("Fecha inicial", value=df["Fecha"].min())
-fecha_fin = st.sidebar.date_input("Fecha final", value=df["Fecha"].max())
+# Filtro de fechas manual
+fecha_inicial = st.sidebar.date_input("Fecha inicial", df["Fecha"].min())
+fecha_final   = st.sidebar.date_input("Fecha final", df["Fecha"].max())
 
-# Filtrado
-df_filtrado = df[(df["Fecha"] >= pd.to_datetime(fecha_inicio)) &
-                 (df["Fecha"] <= pd.to_datetime(fecha_fin))]
+# Aplicar filtros
+df_filtrado = df[(df["Fecha"] >= pd.to_datetime(fecha_inicial)) &
+                 (df["Fecha"] <= pd.to_datetime(fecha_final))]
 
-st.write(f"**Registros filtrados: {len(df_filtrado)}**")
+# Filtros por periodo
+if periodo == "Último Mes":
+    df_filtrado = df_filtrado[df_filtrado["Fecha"] >= (df["Fecha"].max() - pd.DateOffset(months=1))]
+elif periodo == "Últimos 3 Meses":
+    df_filtrado = df_filtrado[df_filtrado["Fecha"] >= (df["Fecha"].max() - pd.DateOffset(months=3))]
+elif periodo == "Último Año":
+    df_filtrado = df_filtrado[df_filtrado["Fecha"] >= (df["Fecha"].max() - pd.DateOffset(years=1))]
 
-# =========================
-# GRÁFICOS
-# =========================
+st.markdown(f"### Registros filtrados: **{len(df_filtrado)}**")
 
-col1, col2 = st.columns(2)
+# ----------------------------------------------------
+# GRÁFICO 1 – PRODUCCIÓN GNL (m³/día)
+# ----------------------------------------------------
+st.subheader("🧱 Producción de GNL (m³ por día)")
 
-# --------------------------
-# GRAFICO 1 – PRODUCCIÓN
-# --------------------------
-with col1:
-    st.subheader("📦 Producción de GNL (m³ por día)")
-    fig1 = px.bar(
+try:
+    fig_prod = px.bar(
         df_filtrado,
         x="Fecha",
         y="Produccion_GNL",
-        title="Producción GNL",
-        text="Produccion_GNL",
+        title="Producción de GNL (m³/día)",
         color_discrete_sequence=["#74b9ff"]
     )
-    fig1.update_traces(texttemplate="%{text:.2s}", textposition="outside")
-    st.plotly_chart(fig1, use_container_width=True)
+    st.plotly_chart(fig_prod, use_container_width=True)
+except Exception as e:
+    st.error(f"Error en gráfico de Producción: {e}")
 
-# --------------------------
-# GRAFICO 2 – DESPACHOS
-# --------------------------
-with col2:
-    st.subheader("🚚 Despachos de GNL (TN por día)")
-    fig2 = px.line(
+# ----------------------------------------------------
+# GRÁFICO 2 – DESPACHOS A CISTERNAS (TN)
+# ----------------------------------------------------
+st.subheader("🚚 Despachos de GNL a Cisternas (TN)")
+
+try:
+    fig_des = px.bar(
         df_filtrado,
         x="Fecha",
         y="Despachos",
-        markers=True,
-        title="Entregas a Cisterna (Despachos)"
+        title="Despachos de GNL (TN por día)",
+        color_discrete_sequence=["#55efc4"]
     )
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig_des, use_container_width=True)
+except Exception as e:
+    st.error(f"Error en gráfico de Despachos: {e}")
 
-# --------------------------
-# GRAFICO 3 – GN ENTRADA
-# --------------------------
-st.subheader("🔥 Gas Natural Recibido (MMPCD)")
-fig3 = px.area(
-    df_filtrado,
-    x="Fecha",
-    y="GN_Entrada",
-    title="Gas Natural de Entrada",
-    color_discrete_sequence=["#55efc4"]
-)
-st.plotly_chart(fig3, use_container_width=True)
+# ----------------------------------------------------
+# GRÁFICO 3 – GAS NATURAL DE ENTRADA (MMPCD)
+# ----------------------------------------------------
+st.subheader("🔥 Gas Natural de Entrada a Planta (MMPCD)")
+
+try:
+    fig_gn = px.line(
+        df_filtrado,
+        x="Fecha",
+        y="GN_Entrada",
+        title="Gas Natural de Entrada (MMPCD)",
+        markers=True,
+        color_discrete_sequence=["#fdcb6e"]
+    )
+    st.plotly_chart(fig_gn, use_container_width=True)
+except Exception as e:
+    st.error(f"Error en gráfico de GN Entrada: {e}")
+
+# ----------------------------------------------------
+# TABLA FINAL
+# ----------------------------------------------------
+st.subheader("📄 Tabla detalle de datos filtrados")
+st.dataframe(df_filtrado, use_container_width=True)
