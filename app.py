@@ -123,6 +123,6 @@ st.plotly_chart(fig3, use_container_width=True)
 # FOOTER
 # -----------------------------
 st.markdown("---")
-st.markdown("🔧 **ANH – Dirección de Distritos Técnica** | Dashboard generado con Streamlit")
+st.markdown("🔧 **ANH – Dirección de Industrialización y Petroquímica** | Dashboard generado con Streamlit")
 
 
