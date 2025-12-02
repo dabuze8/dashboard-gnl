@@ -16,7 +16,7 @@ st.set_page_config(
 # -----------------------------
 @st.cache_data
 def load_data():
-    df = pd.read_excel("1 MASTER_BD_GNL.xlsx", sheet_name="BD_PGNL")
+    df = pd.read_excel("1. MASTER_BD_GNL.xlsx", sheet_name="BD_PGNL")
 
     # Convertir fecha
     df["FECHA"] = pd.to_datetime(df["FECHA"], errors="coerce")
