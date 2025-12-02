@@ -33,6 +33,11 @@ df = df.rename(columns={
 
 # Convertir fecha
 df["Fecha"] = pd.to_datetime(df["Fecha"])
+# Convertir columnas numéricas para evitar errores de Plotly
+cols_numericas = ["Produccion_GNL", "GN_Entrada", "Despachos"]
+
+for col in cols_numericas:
+    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
 # =========================
 # SIDEBAR DE FILTROS
